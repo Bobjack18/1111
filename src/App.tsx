@@ -15,21 +15,18 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [openscadCode, setOpenscadCode] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
-  const [apiKey, setApiKey] = useState<string>('')
   const [showApiKeyInput, setShowApiKeyInput] = useState(true)
   const geminiServiceRef = useRef<GeminiService | null>(null)
 
   useEffect(() => {
     const envApiKey = import.meta.env.VITE_GEMINI_API_KEY
     if (envApiKey && envApiKey !== 'your_gemini_api_key_here') {
-      setApiKey(envApiKey)
       setShowApiKeyInput(false)
       geminiServiceRef.current = new GeminiService(envApiKey)
     }
   }, [])
 
   const handleApiKeySubmit = (key: string) => {
-    setApiKey(key)
     setShowApiKeyInput(false)
     geminiServiceRef.current = new GeminiService(key)
   }
