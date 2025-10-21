@@ -63,16 +63,23 @@ npm run preview
 
 ## Usage
 
-1. Enter your request in the chat (e.g., "Create a cube with a sphere on top")
-2. Gemini will generate OpenSCAD code
-3. View the 3D model in the preview pane
-4. Interact with the 3D view:
+1. **Enter your Gemini API key** (first time only - it will be saved in your browser)
+2. Enter your request in the chat (e.g., "Create a cube with a sphere on top")
+3. Gemini will generate OpenSCAD code
+4. View the 3D model in the preview pane
+5. Interact with the 3D view:
    - **Drag** to rotate
    - **Scroll** to zoom
    - **Double-click** to toggle auto-rotate
    - Click **Reset View** to recenter
-5. Click **Export STL** to download for 3D printing
-6. Continue chatting to refine the design
+6. Click **Export STL** to download for 3D printing
+7. Continue chatting to refine the design
+
+### Managing Your API Key
+- Your API key is saved locally in your browser (localStorage)
+- Click **"Change API Key"** in the header to enter a new key
+- Click **"Reset Chat"** to clear conversation history
+- Your API key never leaves your browser
 
 ## Technologies
 

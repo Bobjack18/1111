@@ -19,6 +19,15 @@ function App() {
   const geminiServiceRef = useRef<GeminiService | null>(null)
 
   useEffect(() => {
+    // Check for saved API key in localStorage first
+    const savedApiKey = localStorage.getItem('gemini_api_key')
+    if (savedApiKey) {
+      setShowApiKeyInput(false)
+      geminiServiceRef.current = new GeminiService(savedApiKey)
+      return
+    }
+
+    // Fall back to environment variable
     const envApiKey = import.meta.env.VITE_GEMINI_API_KEY
     if (envApiKey && envApiKey !== 'your_gemini_api_key_here') {
       setShowApiKeyInput(false)
@@ -27,6 +36,8 @@ function App() {
   }, [])
 
   const handleApiKeySubmit = (key: string) => {
+    // Save API key to localStorage
+    localStorage.setItem('gemini_api_key', key)
     setShowApiKeyInput(false)
     geminiServiceRef.current = new GeminiService(key)
   }
@@ -87,6 +98,9 @@ function App() {
             />
             <button type="submit">Start</button>
           </form>
+          <small style={{ display: 'block', marginTop: '0.5rem', color: '#888' }}>
+            🔒 Your API key will be saved locally in your browser
+          </small>
           <small>
             Get your API key from{' '}
             <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
@@ -102,12 +116,23 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>🤖 Gemini OpenSCAD Editor</h1>
-        <button className="reset-btn" onClick={() => {
-          setMessages([])
-          setOpenscadCode('')
-        }}>
-          Reset
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="reset-btn" onClick={() => {
+            setMessages([])
+            setOpenscadCode('')
+          }}>
+            Reset Chat
+          </button>
+          <button className="reset-btn" onClick={() => {
+            localStorage.removeItem('gemini_api_key')
+            setShowApiKeyInput(true)
+            geminiServiceRef.current = null
+            setMessages([])
+            setOpenscadCode('')
+          }}>
+            Change API Key
+          </button>
+        </div>
       </header>
       
       <div className="main-content">
