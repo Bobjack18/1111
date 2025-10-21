@@ -1,0 +1,129 @@
+.openscad-renderer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 15, 15, 0.8);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.openscad-renderer canvas {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 4px;
+}
+
+.three-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.three-container canvas {
+  display: block;
+  border-radius: 4px;
+}
+
+.placeholder {
+  text-align: center;
+  color: #666;
+}
+
+.placeholder p {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.placeholder small {
+  color: #555;
+}
+
+.rendering-indicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(102, 126, 234, 0.95);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.error-message {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(220, 38, 38, 0.95);
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  max-width: 80%;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.controls-hint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #666;
+  font-size: 0.8rem;
+  background: rgba(26, 26, 26, 0.8);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+}
+
+.viewer-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.control-btn {
+  padding: 0.5rem 1rem;
+  background: rgba(102, 126, 234, 0.9);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.control-btn:hover:not(:disabled) {
+  background: rgba(118, 75, 162, 0.9);
+  transform: translateY(-2px);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
