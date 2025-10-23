@@ -13,7 +13,7 @@ export interface Message {
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([])
-  const [openscadCode, setOpenscadCode] = useState<string>('')
+  const [openscadCode, setOpenscadCode] = useState<string>(() => localStorage.getItem('openscad_code') || '')
   const [isLoading, setIsLoading] = useState(false)
   const [showApiKeyInput, setShowApiKeyInput] = useState(true)
   const geminiServiceRef = useRef<GeminiService | null>(null)
@@ -77,6 +77,7 @@ function App() {
 
   const handleCodeEdit = (newCode: string) => {
     setOpenscadCode(newCode)
+    localStorage.setItem('openscad_code', newCode)
   }
 
   if (showApiKeyInput) {
@@ -120,6 +121,7 @@ function App() {
           <button className="reset-btn" onClick={() => {
             setMessages([])
             setOpenscadCode('')
+            localStorage.removeItem('openscad_code')
           }}>
             Reset Chat
           </button>
@@ -129,6 +131,7 @@ function App() {
             geminiServiceRef.current = null
             setMessages([])
             setOpenscadCode('')
+            localStorage.removeItem('openscad_code')
           }}>
             Change API Key
           </button>

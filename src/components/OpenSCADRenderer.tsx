@@ -23,9 +23,10 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
   const autoRotate = useRef(true)
   const initialCameraDistance = useRef(30)
 
-  // Initialize Three.js scene
+  // Initialize Three.js scene when container becomes available
   useEffect(() => {
     if (!containerRef.current) return
+    if (rendererRef.current) return // Already initialized
 
     // Scene
     const scene = new THREE.Scene()
@@ -103,7 +104,7 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
       }
       renderer.dispose()
     }
-  }, [])
+  }, [code])
 
   // Update model when code changes
   useEffect(() => {

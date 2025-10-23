@@ -78,9 +78,9 @@ export function parseOpenSCADToThreeJS(code: string): THREE.Group {
 
 function parseCube(line: string): THREE.Mesh | null {
   try {
-    // Match cube([x, y, z]) or cube(size)
-    const bracketMatch = line.match(/cube\(\s*\[([^\]]+)\]\s*\)/)
-    const singleMatch = line.match(/cube\(\s*([^,\[\]]+)\s*\)/)
+    // Match cube([x, y, z]) or cube(size) with optional semicolon
+    const bracketMatch = line.match(/cube\(\s*\[([^\]]+)\]\s*\);?/)
+    const singleMatch = line.match(/cube\(\s*([^,\[\]]+)\s*\);?/)
     
     let params: number[]
     
