@@ -80,6 +80,40 @@ function App() {
     localStorage.setItem('openscad_code', newCode)
   }
 
+  const handleSendImage = async (imageFile: File) => {
+    if (!geminiServiceRef.current) return
+
+    const newUserMessage: Message = { role: 'user', content: `[Uploaded image: ${imageFile.name}]` }
+    setMessages(prev => [...prev, newUserMessage])
+    setIsLoading(true)
+
+    try {
+      const response = await geminiServiceRef.current.generateOpenSCADFromImage(
+        imageFile,
+        openscadCode,
+        messages
+      )
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: response.explanation,
+        code: response.code
+      }
+
+      setMessages(prev => [...prev, assistantMessage])
+      setOpenscadCode(response.code)
+      localStorage.setItem('openscad_code', response.code)
+    } catch (error) {
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'Failed to process image'}`
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   if (showApiKeyInput) {
     return (
       <div className="api-key-container">
@@ -144,10 +178,7 @@ function App() {
             messages={messages}
             onSendMessage={handleSendMessage}
             isLoading={isLoading}
-            onSendImage={(file) => {
-              console.log('Image uploaded:', file.name)
-              // TODO: Send to Gemini for processing
-            }}
+            onSendImage={handleSendImage}
           />
         </div>
         

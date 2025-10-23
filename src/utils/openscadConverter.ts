@@ -19,7 +19,21 @@ export function parseOpenSCADToThreeJS(code: string): THREE.Group {
       .join('\n')
       .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
     
-    // Parse basic OpenSCAD primitives
+    // Extract variables
+    const variables = new Map<string, number>()
+    const varMatches = cleanCode.matchAll(/(\w+)\s*=\s*([0-9.]+)\s*;/g)
+    for (const match of varMatches) {
+      variables.set(match[1], parseFloat(match[2]))
+    }
+    
+    // Try to parse the entire code structure
+    const parsed = parseComplexStructure(cleanCode, variables)
+    if (parsed) {
+      group.add(parsed)
+      return group
+    }
+    
+    // Fallback: Parse line by line for simple cases
     const lines = cleanCode.split('\n')
     
     for (const line of lines) {
@@ -29,67 +43,221 @@ export function parseOpenSCADToThreeJS(code: string): THREE.Group {
       
       // Parse cube
       if (trimmed.includes('cube(')) {
-        const cube = parseCube(trimmed)
+        const cube = parseCube(trimmed, variables)
         if (cube) group.add(cube)
       }
       
       // Parse sphere
       else if (trimmed.includes('sphere(')) {
-        const sphere = parseSphere(trimmed)
+        const sphere = parseSphere(trimmed, variables)
         if (sphere) group.add(sphere)
       }
       
       // Parse cylinder
       else if (trimmed.includes('cylinder(')) {
-        const cylinder = parseCylinder(trimmed)
+        const cylinder = parseCylinder(trimmed, variables)
         if (cylinder) group.add(cylinder)
-      }
-      
-      // Parse translate
-      else if (trimmed.includes('translate(')) {
-        const translated = parseTranslate(trimmed, cleanCode)
-        if (translated) group.add(translated)
-      }
-      
-      // Parse rotate
-      else if (trimmed.includes('rotate(')) {
-        const rotated = parseRotate(trimmed, cleanCode)
-        if (rotated) group.add(rotated)
-      }
-      
-      // Parse difference
-      else if (trimmed.includes('difference()')) {
-        const diff = parseDifference(cleanCode)
-        if (diff) group.add(diff)
       }
     }
     
-    // If no objects were parsed, throw error
+    // If no objects were parsed, create a simple placeholder
     if (group.children.length === 0) {
-      throw new Error('No valid OpenSCAD primitives found. Supported: cube, sphere, cylinder, translate, rotate')
+      // Create a simple box as placeholder
+      const geometry = new THREE.BoxGeometry(10, 10, 10)
+      const material = new THREE.MeshPhongMaterial({ 
+        color: 0x667eea,
+        transparent: true,
+        opacity: 0.7
+      })
+      const mesh = new THREE.Mesh(geometry, material)
+      group.add(mesh)
     }
   } catch (error) {
     console.error('Error parsing OpenSCAD:', error)
-    throw error
+    // Create placeholder on error
+    const geometry = new THREE.BoxGeometry(10, 10, 10)
+    const material = new THREE.MeshPhongMaterial({ 
+      color: 0xff6b6b,
+      transparent: true,
+      opacity: 0.7
+    })
+    const mesh = new THREE.Mesh(geometry, material)
+    group.add(mesh)
   }
   
   return group
 }
 
-function parseCube(line: string): THREE.Mesh | null {
+// Parse complex nested structures
+function parseComplexStructure(code: string, variables: Map<string, number>): THREE.Object3D | null {
   try {
-    // Match cube([x, y, z]) or cube(size) with optional semicolon
-    const bracketMatch = line.match(/cube\(\s*\[([^\]]+)\]\s*\);?/)
-    const singleMatch = line.match(/cube\(\s*([^,\[\]]+)\s*\);?/)
+    // Handle difference() blocks
+    if (code.includes('difference()')) {
+      return parseDifferenceBlock(code, variables)
+    }
+    
+    // Handle union() blocks
+    if (code.includes('union()')) {
+      return parseUnionBlock(code, variables)
+    }
+    
+    // Handle linear_extrude
+    if (code.includes('linear_extrude')) {
+      return parseLinearExtrude(code, variables)
+    }
+    
+    return null
+  } catch (error) {
+    console.error('Error parsing complex structure:', error)
+    return null
+  }
+}
+
+// Parse difference() { ... } blocks
+function parseDifferenceBlock(code: string, variables: Map<string, number>): THREE.Object3D | null {
+  try {
+    // Extract the content inside difference() { ... }
+    const match = code.match(/difference\(\)\s*\{([\s\S]*)\}/)
+    if (!match) return null
+    
+    const content = match[1]
+    
+    // For now, create a simple approximation - render the first shape
+    // Real CSG would require three-csg-ts library
+    const shapes = extractShapes(content, variables)
+    if (shapes.length > 0) {
+      // Return the first (base) shape with a different color to indicate it's a difference
+      const base = shapes[0]
+      if (base instanceof THREE.Mesh) {
+        base.material = new THREE.MeshPhongMaterial({
+          color: 0x8b5cf6,
+          transparent: true,
+          opacity: 0.85
+        })
+      }
+      return base
+    }
+    
+    return null
+  } catch (error) {
+    console.error('Error parsing difference:', error)
+    return null
+  }
+}
+
+// Parse union() { ... } blocks
+function parseUnionBlock(code: string, variables: Map<string, number>): THREE.Object3D | null {
+  try {
+    const match = code.match(/union\(\)\s*\{([\s\S]*)\}/)
+    if (!match) return null
+    
+    const content = match[1]
+    const group = new THREE.Group()
+    
+    const shapes = extractShapes(content, variables)
+    shapes.forEach(shape => group.add(shape))
+    
+    return group
+  } catch (error) {
+    console.error('Error parsing union:', error)
+    return null
+  }
+}
+
+// Parse linear_extrude
+function parseLinearExtrude(code: string, variables: Map<string, number>): THREE.Object3D | null {
+  try {
+    // Extract height parameter
+    const heightMatch = code.match(/height\s*=\s*([^,\)]+)/)
+    let height = 10
+    if (heightMatch) {
+      const heightStr = heightMatch[1].trim()
+      height = variables.has(heightStr) ? variables.get(heightStr)! : parseFloat(heightStr)
+    }
+    
+    // For now, create a simple extruded shape (box)
+    // Real implementation would need to parse 2D shapes and extrude them
+    const geometry = new THREE.BoxGeometry(20, 20, height)
+    const material = new THREE.MeshPhongMaterial({
+      color: 0x10b981,
+      transparent: true,
+      opacity: 0.85
+    })
+    const mesh = new THREE.Mesh(geometry, material)
+    
+    return mesh
+  } catch (error) {
+    console.error('Error parsing linear_extrude:', error)
+    return null
+  }
+}
+
+// Extract shapes from code block
+function extractShapes(code: string, variables: Map<string, number>): THREE.Object3D[] {
+  const shapes: THREE.Object3D[] = []
+  
+  // Look for translate blocks
+  const translateMatches = code.matchAll(/translate\(\[([^\]]+)\]\)\s*(\w+\([^}]+\}|\w+\([^)]+\))/g)
+  for (const match of translateMatches) {
+    const coords = match[1].split(',').map(s => {
+      const trimmed = s.trim()
+      return variables.has(trimmed) ? variables.get(trimmed)! : parseFloat(trimmed)
+    })
+    
+    const shapeCode = match[2]
+    const shape = parseShape(shapeCode, variables)
+    if (shape) {
+      shape.position.set(coords[0] || 0, coords[1] || 0, coords[2] || 0)
+      shapes.push(shape)
+    }
+  }
+  
+  // Look for standalone shapes
+  const cubeMatches = code.matchAll(/cube\(\s*\[([^\]]+)\][^;]*\)/g)
+  for (const match of cubeMatches) {
+    const cube = parseCube(match[0], variables)
+    if (cube) shapes.push(cube)
+  }
+  
+  return shapes
+}
+
+// Parse a single shape
+function parseShape(code: string, variables: Map<string, number>): THREE.Object3D | null {
+  if (code.includes('cube(')) {
+    return parseCube(code, variables)
+  } else if (code.includes('sphere(')) {
+    return parseSphere(code, variables)
+  } else if (code.includes('cylinder(')) {
+    return parseCylinder(code, variables)
+  } else if (code.includes('linear_extrude')) {
+    return parseLinearExtrude(code, variables)
+  }
+  return null
+}
+
+function parseCube(line: string, variables: Map<string, number> = new Map()): THREE.Mesh | null {
+  try {
+    // Match cube([x, y, z], ...) or cube(size, ...) with optional parameters and semicolon
+    const bracketMatch = line.match(/cube\(\s*\[([^\]]+)\]/)
+    const singleMatch = line.match(/cube\(\s*([^,\[\)]+)/)
     
     let params: number[]
     
     if (bracketMatch) {
-      // cube([x, y, z])
-      params = bracketMatch[1].split(',').map(s => parseFloat(s.trim()))
+      // cube([x, y, z]) - may contain variables
+      params = bracketMatch[1].split(',').map(s => {
+        const trimmed = s.trim()
+        // Check if it's a variable
+        if (variables.has(trimmed)) {
+          return variables.get(trimmed)!
+        }
+        return parseFloat(trimmed)
+      })
     } else if (singleMatch) {
-      // cube(size)
-      const val = parseFloat(singleMatch[1].trim())
+      // cube(size) - may be a variable
+      const trimmed = singleMatch[1].trim()
+      const val = variables.has(trimmed) ? variables.get(trimmed)! : parseFloat(trimmed)
       params = [val]
     } else {
       console.warn('Could not parse cube:', line)
@@ -122,7 +290,7 @@ function parseCube(line: string): THREE.Mesh | null {
   }
 }
 
-function parseSphere(line: string): THREE.Mesh | null {
+function parseSphere(line: string, variables: Map<string, number> = new Map()): THREE.Mesh | null {
   try {
     // Match sphere(r=...) or sphere(...)
     const match = line.match(/sphere\((?:r\s*=\s*)?([^,)]+)/)
@@ -145,7 +313,7 @@ function parseSphere(line: string): THREE.Mesh | null {
   }
 }
 
-function parseCylinder(line: string): THREE.Mesh | null {
+function parseCylinder(line: string, variables: Map<string, number> = new Map()): THREE.Mesh | null {
   try {
     // Match cylinder(h=..., r=...) or cylinder(h, r, r)
     const hMatch = line.match(/h\s*=\s*([^,)]+)/)

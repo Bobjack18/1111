@@ -23,10 +23,12 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
   const autoRotate = useRef(true)
   const initialCameraDistance = useRef(30)
 
-  // Initialize Three.js scene when container becomes available
+  // Initialize Three.js scene ONCE when component mounts
   useEffect(() => {
     if (!containerRef.current) return
     if (rendererRef.current) return // Already initialized
+
+    console.log('Initializing Three.js scene...')
 
     // Scene
     const scene = new THREE.Scene()
@@ -50,6 +52,8 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
     renderer.setPixelRatio(window.devicePixelRatio)
     containerRef.current.appendChild(renderer.domElement)
     rendererRef.current = renderer
+
+    console.log('Canvas added to DOM')
 
     // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
@@ -96,15 +100,15 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
     }
     window.addEventListener('resize', handleResize)
 
-    // Cleanup
+    // Cleanup only on unmount
     return () => {
       window.removeEventListener('resize', handleResize)
-      if (containerRef.current && renderer.domElement) {
+      if (containerRef.current && renderer.domElement && containerRef.current.contains(renderer.domElement)) {
         containerRef.current.removeChild(renderer.domElement)
       }
       renderer.dispose()
     }
-  }, [code])
+  }, []) // Empty dependency - only run once!
 
   // Update model when code changes
   useEffect(() => {
@@ -118,8 +122,11 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
     }
 
     if (!sceneReady || !sceneRef.current) {
+      console.log('Scene not ready yet, waiting...', { sceneReady, hasScene: !!sceneRef.current })
       return
     }
+
+    console.log('Rendering model from code...')
 
     setIsRendering(true)
     setError('')
@@ -141,9 +148,13 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
       }
 
       // Parse and add new model
+      console.log('Parsing OpenSCAD code...')
       const modelGroup = parseOpenSCADToThreeJS(code)
+      console.log('Parsed! Children count:', modelGroup.children.length)
       
+      // Parser now always adds placeholder, so this should never be 0
       if (modelGroup.children.length === 0) {
+        console.warn('No geometry found, but parser should have added placeholder')
         throw new Error('No valid geometry found in OpenSCAD code')
       }
       
@@ -205,7 +216,7 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
   }
 
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault()
+    e.preventDefault() // Prevent page scroll
     if (!cameraRef.current) return
 
     const delta = e.deltaY * 0.01
@@ -274,23 +285,25 @@ export function OpenSCADRenderer({ code }: OpenSCADRendererProps) {
         </div>
       )}
       
+      <div
+        ref={containerRef}
+        className="three-container"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onDoubleClick={handleDoubleClick}
+        onWheel={handleWheel}
+        style={{ 
+          cursor: isDragging.current ? 'grabbing' : 'grab',
+          width: '100%',
+          height: '100%',
+          display: code ? 'block' : 'none' // Hide when no code, but keep in DOM
+        }}
+      />
+      
       {code && (
         <>
-          <div
-            ref={containerRef}
-            className="three-container"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onDoubleClick={handleDoubleClick}
-            onWheel={handleWheel}
-            style={{ 
-              cursor: isDragging.current ? 'grabbing' : 'grab',
-              width: '100%',
-              height: '100%'
-            }}
-          />
           {isRendering && <div className="rendering-indicator">Rendering...</div>}
           {isExporting && <div className="rendering-indicator">Exporting STL...</div>}
           {error && <div className="error-message">{error}</div>}
