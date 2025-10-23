@@ -6,11 +6,13 @@ interface ChatInterfaceProps {
   messages: Message[]
   onSendMessage: (message: string) => void
   isLoading: boolean
+  onSendImage?: (image: File) => void
 }
 
-export function ChatInterface({ messages, onSendMessage, isLoading }: ChatInterfaceProps) {
+export function ChatInterface({ messages, onSendMessage, isLoading, onSendImage }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -27,6 +29,36 @@ export function ChatInterface({ messages, onSendMessage, isLoading }: ChatInterf
       setInput('')
     }
   }
+
+  // Handle image upload
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && onSendImage) {
+      onSendImage(file)
+      e.target.value = ''
+    }
+  }
+
+  // Handle paste image
+  useEffect(() => {
+    const handler = (e: ClipboardEvent) => {
+      if (e.clipboardData) {
+        const items = e.clipboardData.items
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.startsWith('image/')) {
+            const file = items[i].getAsFile()
+            if (file && onSendImage) {
+              onSendImage(file)
+              e.preventDefault()
+              break
+            }
+          }
+        }
+      }
+    }
+    window.addEventListener('paste', handler)
+    return () => window.removeEventListener('paste', handler)
+  }, [onSendImage])
 
   return (
     <div className="chat-interface">
@@ -89,6 +121,21 @@ export function ChatInterface({ messages, onSendMessage, isLoading }: ChatInterf
         />
         <button type="submit" disabled={isLoading || !input.trim()}>
           Send
+        </button>
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          ref={fileInputRef}
+          onChange={handleImageChange}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading}
+          title="Upload an image"
+        >
+          📷
         </button>
       </form>
     </div>

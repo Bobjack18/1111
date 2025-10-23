@@ -144,6 +144,10 @@ function App() {
             messages={messages}
             onSendMessage={handleSendMessage}
             isLoading={isLoading}
+            onSendImage={(file) => {
+              console.log('Image uploaded:', file.name)
+              // TODO: Send to Gemini for processing
+            }}
           />
         </div>
         
